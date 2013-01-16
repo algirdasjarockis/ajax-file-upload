@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>Ajax Upload</title>
+	<script type="text/javascript" src="http://code.jquery.com/jquery-1.8.3.min.js"></script>
+	<script type="text/javascript" src="AjaxFileUpload.js"></script>
+	<style>
+	body {
+		margin: 0px;
+		padding: 0px;
+		font-family: Verdana;
+		font-size: 12px;
+	}
+	.body {
+		padding-left: 10px;
+	}
+	.header {
+		font-size: 22px;
+		font-weight: bold;
+		margin: 0px;
+	}
+	.fileInputWrapper {
+		padding: 2px;
+		background-color: #c0dbc2;
+	}
+	.uploadBtnWrapper {
+		padding: 2px;
+		background-color: #c0dbc2;
+	}
+	.info th {
+		text-align: right;
+	}
+	.stats {
+		padding: 4px;
+		/*background-color: #afbdd7;*/
+	}
+	.pgBarTotalBg {
+		border: 1px solid black;
+		background-color: white;
+		color: black;
+		font-weight: bold;
+		width: 300px;
+		height: 26px;
+	}
+	.pgBarTotalBg > div {
+		background-color: #afbdd7;
+		width: 0px;
+		height: 20px;
+		/* text-align: right; */
+		padding-top: 6px;
+	}
+	.pgBarBg {
+		border: 1px solid black;
+		background-color: white;
+		color: black;
+		font-weight: bold;
+		width: 240px;
+		height: 18px;
+		margin-bottom: 4px;
+	}
+	.pgBarBg > div {
+		background-color: #afbdd7;
+		width: 0px;
+		height: 18px;
+	}
+	#progress {
+		height: 500px;
+		overflow-y: auto;
+	}
+	</style>
+	<script>
+	function format(str)
+	{
+		for(i = 1; i < arguments.length; i++) {
+			var re = new RegExp("\\{" + (i - 1) + "\\}", 'ig');
+			str = str.replace(re, arguments[i]);
+		}
+
+		return str;
+	}
+	$(document).ready(function() {
+		$.uploadTest = {
+			fileSelected: function()
+			{
+				var file = $('#fileToUpload').get(0).files[0];
+				if (file) {
+					var fileSize = 0;
+					if (file.size > 1024 * 1024)
+						fileSize = (Math.round(file.size * 100 / (1024 * 1024)) / 100).toString() + 'MB';
+					else
+						fileSize = (Math.round(file.size * 100 / 1024) / 100).toString() + 'KB';
+
+					$('#fileName').html('Name: ' + file.name);
+					$('#fileSize').html('Size: ' + fileSize);
+					$('#fileType').html('Type: ' + file.type);
+				}
+			},
+
+			uploadFile: function()
+			{
+				$('#progress').html('');
+				$.fileUpload = $.FileUpload({
+					url: "http://localhost:8888",
+					file:  document.getElementById('fileToUpload').files[0],
+					maxRequests: 6,
+					//httpUsername: 'upload',
+					//httpPassword: 'upload',
+					listeners: {
+						beforechunkupload: function(self, chunkId, fd, xhr, isLast) {
+							fd.append('username', 'upload');
+							fd.append('password', 'upload');
+						},
+						progress: function(percent) {
+							$('.pgBarTotalBg > div').html(percent.toFixed() + '%').css({'width': percent.toFixed() + '%'});
+							document.getElementById('progressNumberTotal').innerHTML = 'Total: ' + percent.toFixed() + '%';
+						},
+						upload: function(self, estTime) {
+							$('#totalChunks').html(format('Total chunks: {0}', self.getTotalChunks()));
+						},
+						finish: function(self, estTime, loaded, e) {
+							console.log('UPLOAD FINISHED');
+							$('#progressNumberTotal').html(format('<div>Time: {0}sec.</div>', estTime / 1000));
+							$('#upload-btn').removeAttr('disabled');
+
+							var missing = self.getMissingChunks();
+							if (missing.length > 0) {
+								alert('There are missing chunks: ' + missing);
+							}
+						},
+						chunkprogress: function(chunkId, percentComplete) {
+							var chunkElem = $('#chunk-prg-'+chunkId + ' > div');
+
+							if (chunkElem.length <= 0) {
+								var pg = $('#progress').append(format('<div id="chunk-prg-{0}" class="pgBarBg"><div></div></div>', chunkId));
+								pg.get(0).scrollTop = pg.get(0).scrollHeight;
+
+								chunkElem = $('chunk-prg-'+chunkId + ' > div');
+							}
+							chunkElem.html(Math.round(percentComplete) + '%').css({width: Math.round(percentComplete) + '%'});
+						},
+						chunkupload: function(chunkId, chunkLoaded, result, e) {
+							console.log('Loaded:', chunkId, ', max loaded: ', chunkLoaded);
+							$('#chunk-prg-'+chunkId + ' > div').html('100%').css({width: '100%'});
+						},
+						cancel: function(self) {
+							$('#upload-btn').removeAttr('disabled');
+							alert('Uploading was canceled');
+						},
+						abort: function(e) {
+							console.log('ABORTED: ', e);
+						},
+						error: function(e) {
+							console.log('ERROR: ', e);
+						},
+						httperror: function(self, chunkId, statusCode, e) {
+							//self.cancelUpload();
+						},
+						jsonerror: function(self, chunkId, result, e) {
+							//self.cancelUpload();
+							console.log('JSON error', result);
+						}
+					}
+				});
+			}
+		}
+	});
+	</script>
+</head>
+<body>
+	<div class="body">
+		<div class="header">
+			<h3>AJAX file upload demo</h3>
+		</div>
+		<div class="fileInputWrapper">
+			<label for="fileToUpload">Select a File to Upload: </label>
+			<input type="file" name="fileToUpload" id="fileToUpload" onchange="$.uploadTest.fileSelected();"/>
+			<input type="button" value="Stop upload" onclick="$.fileUpload.cancelUpload()"/>
+		</div>
+		<table class="info">
+		<tr>
+			<th>File name: </th>
+			<td><div id="fileName"></div></td>
+		</tr>
+		<tr>
+			<th>File size: </th>
+			<td><div id="fileSize"></div></td>
+		</tr>
+		<tr>
+			<th>File type: </th>
+			<td><div id="fileType"></div></td>
+		</tr>
+		</table>
+		<div class="uploadBtnWrapper">
+			<input type="button" id="upload-btn" onclick="$.uploadTest.uploadFile();$(this).attr('disabled', 'disabled')" value="Upload" />
+		</div>
+		<div class="stats">
+			<div class="pgBarTotalBg">
+				<div>0%</div>
+			</div>
+			<div id="progressNumberTotal" style="font-weight: bold">-</div>
+			<div id="totalChunks"></div>
+			<div id="progress">
+			</div>
+		</div>
+    </div>
+</body>
+</html>
