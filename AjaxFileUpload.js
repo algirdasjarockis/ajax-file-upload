@@ -184,8 +184,11 @@
 			_totalChunks = Math.ceil(_file.size / _chunkSize);
 			_username = config.httpUsername || _username;
 			_password = config.httpPassword || _password;
-			_jsonResponse = config.jsonResponse || _jsonResponse;
+
 			_successProperty = config.successProperty || _successProperty;
+			if (typeof config.jsonResponse != 'undefined') {
+				_jsonResponse = config.jsonResponse;
+			}
 
 			// set custom POST fieldnames
 			if ('fieldNames' in config) {
@@ -350,7 +353,7 @@
 					if (!isError) {
 						_chunksLoaded += 1;
 						_onchunkUpload(chunkId, _chunksLoaded, e.target.responseText, e);
-						_onProgress(_chunksLoaded / _totalChunks * 100, _chunksLoaded);
+						_onProgress(self, _chunksLoaded / _totalChunks * 100, _chunksLoaded);
 
 						// check for more chunks which were delayed
 						if (!_isLast) {

@@ -106,12 +106,13 @@
 					maxRequests: 6,
 					//httpUsername: 'upload',
 					//httpPassword: 'upload',
+					//jsonResponse: false,
 					listeners: {
 						beforechunkupload: function(self, chunkId, fd, xhr, isLast) {
 							fd.append('username', 'upload');
 							fd.append('password', 'upload');
 						},
-						progress: function(percent) {
+						progress: function(self, percent) {
 							$('.pgBarTotalBg > div').html(percent.toFixed() + '%').css({'width': percent.toFixed() + '%'});
 							document.getElementById('progressNumberTotal').innerHTML = 'Total: ' + percent.toFixed() + '%';
 						},

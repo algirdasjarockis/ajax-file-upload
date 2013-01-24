@@ -67,9 +67,9 @@ class MyHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
                 print " {0}: filename '{1}', type: {1}".format(k, form[k].filename, form[k].type)
         print "===== <POST DATA> =====\n"
 
+        self.end_headers()
         self.processUpload(form)
 
-        self.end_headers()
         #self.wfile.write(output)
 
 
@@ -85,6 +85,7 @@ class MyHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             isLast
             fileName
         '''
+               
         if form['chunk'].filename:
             chunkPrefix = 'chunk'
             fileName = form['fileName'].value
@@ -104,7 +105,6 @@ class MyHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             
             uploaded = len(glob(uploadDir + '/*'))
             if uploaded == int(form['totalChunks'].value):
-                self.end_headers()
                 self.wfile.write(json.dumps({'success': True, 'status': 'Cating chunks'}))
                 
                 # timer thread for cating files, avoiding blocking response to client
@@ -129,15 +129,27 @@ class MyHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
     #
     def catChunks(self, uploadDir, chunkPrefix, chunkCount, fileName):
         chunks = []
+        destFile = os.path.join(self.uploadDir, fileName)
+               
+        it = 0
+        body, ext = os.path.splitext(destFile)        
+        while os.path.exists(destFile):
+            # destination file already exists, get new name
+            # get next number for same base filename
+            count = len(glob(body + '*' + ext))
+            
+            destFile = "{0}({1}){2}".format(body, count + it, ext)
+            it += 1
+        
         for i in xrange(1, chunkCount + 1):
-            chunks.append(uploadDir + '/' + chunkPrefix + str(i))
+            chunks.append('"' + uploadDir + '/' + chunkPrefix + str(i) + '"')
         
         # concat all chunks
-        command = 'cat ' + ' '.join(chunks) + ' > ' + self.uploadDir + '/' + fileName
+        command = 'cat ' + ' '.join(chunks) + ' > "' + destFile + '"'
         subprocess.call(command, shell=True)
         
         # remove temp directory
-        subprocess.call('rm -r ' + uploadDir, shell=True)
+        subprocess.call(['rm', '-r', uploadDir])
                 
                 
                 
