@@ -503,6 +503,17 @@
 
 
 		//
+		// return upload id
+		//
+		// @return int
+		//
+		this.getUploadId = function()
+		{
+			return _startedTs;
+		}
+
+
+		//
 		// returns true is at least one chunk being currently uploaded
 		//
 		// @return bool

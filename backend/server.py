@@ -142,11 +142,11 @@ class MyHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             it += 1
         
         for i in xrange(1, chunkCount + 1):
-            chunks.append('"' + uploadDir + '/' + chunkPrefix + str(i) + '"')
-        
-        # concat all chunks
-        command = 'cat ' + ' '.join(chunks) + ' > "' + destFile + '"'
-        subprocess.call(command, shell=True)
+            chunks.append(uploadDir + '/' + chunkPrefix + str(i))
+               
+        command = ['cat'] + chunks
+        with open(destFile, 'wb') as fw:
+            subprocess.call(command, stdout=fw)        
         
         # remove temp directory
         subprocess.call(['rm', '-r', uploadDir])
