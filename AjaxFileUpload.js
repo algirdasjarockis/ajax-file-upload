@@ -127,9 +127,7 @@
 		const MAX_REQUESTS = 10;
 
 		var _url = null,
-			_chunkStart = 0,
 			_chunkSize = BYTES_PER_CHUNK,
-			_chunkEnd = BYTES_PER_CHUNK,
 			_id = 0,
 			_chunksLoading = 0,
 			_chunksLoaded = 0,
@@ -178,7 +176,6 @@
 		{
 			_url = config.url || _url,
 			_chunkSize = config.chunkSize || BYTES_PER_CHUNK,
-			_chunkEnd = _chunkSize,
 			_file = config.file || _file,
 			_maxRequests = config.maxRequests || _maxRequests,
 			_totalChunks = Math.ceil(_file.size / _chunkSize);
@@ -244,36 +241,32 @@
 		//
 		// return next chunk of file
 		//
-		function _getChunk()
+		function _getChunk(id)
 		{
 			if (!_file) {
 				throw new Error('File is null');
 				return false;
 			}
 
-			var blob = _file;
-			var chunk = null;
+			var blob = _file,
+				chunk = null,
+				chunkStart = id * _chunkSize,
+				chunkEnd = chunkStart + _chunkSize;
 
-			if (_chunkStart < blob.size) {
+			if (chunkStart < blob.size) {
 				if ('mozSlice' in blob) {
-					chunk = blob.mozSlice(_chunkStart, _chunkEnd);
-				} else if ('webkitSlice' in blob) {
-					chunk = blob.webkitSlice(_chunkStart, _chunkEnd);
+					chunk = blob.mozSlice(chunkStart, chunkEnd);
 				}
 				else if ('slice' in blob) {
-					chunk = blob.slice(_chunkStart, _chunkEnd);
+					chunk = blob.slice(chunkStart, chunkEnd);
 				}
 				else {
 					throw new Error('No slice method for Blob!');
 				}
 
-				if (_chunkEnd >= blob.size) {
+				if (chunkEnd >= blob.size) {
 					_isLast = true;
 				}
-
-				_id += 1;
-				_chunkStart = _chunkEnd;
-				_chunkEnd += _chunkSize;
 
 				return chunk;
 			}
@@ -414,7 +407,9 @@
 			}
 
 			while (true) {
-				var chunk = _getChunk();
+				var chunk = _getChunk(_id);
+				_id += 1;
+
 				if (!chunk) {
 					// it's last chunk!
 					break;
